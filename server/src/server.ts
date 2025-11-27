@@ -18,9 +18,10 @@ app.use(cors({
 
     // Allow configured client URL
     const allowedOrigins = [
-      process.env.CLIENT_URL || 'http://localhost:5173',
-      'http://localhost:5173',
-      'http://localhost:5174', // Vite sometimes uses this port
+      process.env.CLIENT_URL || 'http://localhost:3000',
+      'http://localhost:3000', // React dev server default
+      'http://localhost:5173', // Vite default
+      'http://localhost:5174', // Vite alternate
     ];
 
     if (allowedOrigins.includes(origin)) {

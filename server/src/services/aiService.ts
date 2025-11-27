@@ -80,8 +80,15 @@ Output ONLY the category name (ESCALATE, OFF_TOPIC, or ANSWER).`],
     }
 
     // Step 3: Generate Answer (Streaming)
+    // Format fees without JSON.stringify to avoid LangChain template variable conflicts
+    const formatFees = (fees: any) => {
+      return Object.entries(fees)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join(', ');
+    };
+
     const productContext = KNOWLEDGE_BASE.map(p =>
-      `Name: ${p.name}\nType: ${p.type}\nFeatures: ${p.features.join(', ')}\nFees: ${JSON.stringify(p.fees)}\nInterest: ${p.interestRate}\nEligibility: ${p.eligibility}\nDescription: ${p.description}`
+      `Name: ${p.name}\nType: ${p.type}\nFeatures: ${p.features.join(', ')}\nFees: ${formatFees(p.fees)}\nInterest: ${p.interestRate}\nEligibility: ${p.eligibility}\nDescription: ${p.description}`
     ).join('\n\n');
 
     const systemMessage = `You are the MoneyHero AI Assistant.
