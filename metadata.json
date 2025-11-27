@@ -1,0 +1,5 @@
+{
+  "name": "MoneyHero AI Support",
+  "description": "A smart financial support agent using Gemini Flash for RAG-based product answers and intent handling.",
+  "requestFramePermissions": []
+}
