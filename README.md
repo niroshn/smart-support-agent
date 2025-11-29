@@ -15,19 +15,37 @@ An AI-powered customer support chat application for financial products using Cla
 
 ## Quick Start
 
+### 🐳 Docker (Recommended)
+
+**One command to run everything:**
+
+```bash
+docker-compose up
+```
+
+Access the app at http://localhost
+
+**Requirements:** Docker Desktop installed
+**Setup Guide:** See [DOCKER_README.md](DOCKER_README.md)
+
+---
+
+### 🛠️ Manual Setup
+
 **Prerequisites:** Node.js 18+ and Yarn
 
-### 1. Backend Setup
+#### 1. Backend Setup
 
 ```bash
 cd server
 yarn install
-# Edit server/.env and add your Anthropic API key
+# Edit server/.env and add your API keys
 # ANTHROPIC_API_KEY=your_key_here
+# OPENAI_API_KEY=your_key_here
 yarn dev
 ```
 
-### 2. Frontend Setup
+#### 2. Frontend Setup
 
 ```bash
 # In root directory
@@ -35,15 +53,17 @@ yarn install
 yarn dev
 ```
 
-For detailed setup instructions, see [SETUP.md](SETUP.md)
+**Detailed Instructions:** See [QUICK_START.md](QUICK_START.md)
 
 ## Features
 
-- Real-time streaming chat responses
-- Intent classification (product queries, escalations, off-topic)
-- Financial product knowledge base
-- Conversation history with local storage
-- Human agent escalation workflow
+- 🤖 **Real-time AI Chat** - Streaming responses with Claude 3.5 Sonnet
+- 🔍 **RAG (Retrieval-Augmented Generation)** - Vector database with semantic search
+- 📚 **Smart Knowledge Base** - OpenAI embeddings on markdown documentation
+- 🎯 **Intent Classification** - Automatic routing (queries, escalations, off-topic)
+- 💬 **Conversation History** - Persistent chat with local storage
+- 🚀 **Docker Support** - One-command deployment
+- 🎨 **Modern UI** - React with markdown rendering and real-time updates
 
 ## Development
 

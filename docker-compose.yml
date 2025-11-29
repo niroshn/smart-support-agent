@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # Backend service
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: moneyhero-backend
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - CLIENT_URL=http://localhost
+      - NODE_ENV=production
+    volumes:
+      # Mount docs folder for vector store
+      - ./docs:/app/docs:ro
+      # Optional: Mount for development (uncomment for hot reload)
+      # - ./server/src:/app/src
+    networks:
+      - moneyhero-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend service
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:3001
+    container_name: moneyhero-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - moneyhero-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  moneyhero-network:
+    driver: bridge
+
+# Optional: Volumes for persistence
+# volumes:
+#   backend-data:
