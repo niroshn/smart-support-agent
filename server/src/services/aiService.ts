@@ -2,8 +2,8 @@ import { ChatAnthropic } from "@langchain/anthropic";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
 import { HumanMessage, AIMessage, BaseMessage } from "@langchain/core/messages";
-import { KNOWLEDGE_BASE } from "../data/products.js";
 import { Message, StreamingResponse } from "../types/index.js";
+import { getContextForQuery } from "./vectorService.js";
 
 // Helper: Create a stream from a static string
 async function* stringToStream(text: string): AsyncIterable<string> {
@@ -37,7 +37,7 @@ export const sendMessageToAgent = async (
 
   // Initialize Claude with LangChain
   const model = new ChatAnthropic({
-    model: "claude-3-5-sonnet-20241022",
+    model: "claude-sonnet-4-5-20250929",
     anthropicApiKey: apiKey,
     temperature: 0,
     streaming: true,
@@ -80,28 +80,25 @@ Output ONLY the category name (ESCALATE, OFF_TOPIC, or ANSWER).`],
     }
 
     // Step 3: Generate Answer (Streaming)
-    // Format fees without JSON.stringify to avoid LangChain template variable conflicts
-    const formatFees = (fees: any) => {
-      return Object.entries(fees)
-        .map(([key, value]) => `${key}: ${value}`)
-        .join(', ');
-    };
+    // Retrieve relevant context from vector store using RAG
+    const productContext = await getContextForQuery(newMessage);
 
-    const productContext = KNOWLEDGE_BASE.map(p =>
-      `Name: ${p.name}\nType: ${p.type}\nFeatures: ${p.features.join(', ')}\nFees: ${formatFees(p.fees)}\nInterest: ${p.interestRate}\nEligibility: ${p.eligibility}\nDescription: ${p.description}`
-    ).join('\n\n');
+    const systemMessage = `You are the MoneyHero AI Assistant, a helpful financial advisor specializing in credit cards and personal loans in Singapore.
 
-    const systemMessage = `You are the MoneyHero AI Assistant.
-Use the provided Knowledge Base to answer the User's Question.
+Use the provided Knowledge Base to answer the User's Question accurately and comprehensively.
 
 Knowledge Base:
 ${productContext}
 
 Guidelines:
-- Only use the Knowledge Base provided. If the answer isn't there, say "I don't have that information".
-- Be helpful, concise, and professional.
-- If comparing products, list pros/cons based on data.
-- Format your response in clean Markdown.`;
+- Answer based on the Knowledge Base provided above
+- If the answer isn't in the Knowledge Base, say "I don't have that specific information in my current knowledge base"
+- Be helpful, concise, and professional
+- When comparing products, highlight key differences in benefits, fees, and eligibility
+- Format your response in clean Markdown
+- Use bullet points and tables where appropriate for better readability
+- Include specific numbers and details when available
+- If discussing fees or charges, be clear and transparent`;
 
     // Create chat prompt with conversation history
     const chatPrompt = ChatPromptTemplate.fromMessages([
