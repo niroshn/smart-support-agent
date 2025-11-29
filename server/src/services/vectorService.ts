@@ -1,11 +1,10 @@
-import { DirectoryLoader } from 'langchain/document_loaders/fs/directory';
-import { TextLoader } from 'langchain/document_loaders/fs/text';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
-import { MemoryVectorStore } from 'langchain/vectorstores/memory';
+import { MemoryVectorStore } from '@langchain/classic/vectorstores/memory';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { Document } from '@langchain/core/documents';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs/promises';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,6 +28,48 @@ const VECTOR_CONFIG = {
 };
 
 /**
+ * Recursively find all markdown files in a directory
+ */
+async function findMarkdownFiles(dir: string): Promise<string[]> {
+  const files: string[] = [];
+
+  async function walk(currentPath: string) {
+    const entries = await fs.readdir(currentPath, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const fullPath = path.join(currentPath, entry.name);
+
+      if (entry.isDirectory()) {
+        await walk(fullPath);
+      } else if (entry.isFile() && entry.name.endsWith('.md')) {
+        files.push(fullPath);
+      }
+    }
+  }
+
+  await walk(dir);
+  return files;
+}
+
+/**
+ * Load a markdown file and create a Document
+ */
+async function loadMarkdownFile(filePath: string): Promise<Document> {
+  const content = await fs.readFile(filePath, 'utf-8');
+  const fileName = path.basename(filePath, '.md');
+  const category = path.dirname(filePath).split(path.sep).pop() || 'general';
+
+  return new Document({
+    pageContent: content,
+    metadata: {
+      source: filePath,
+      fileName,
+      category,
+    },
+  });
+}
+
+/**
  * Initialize the vector store by loading and embedding all documents
  * This function is called once when the server starts
  */
@@ -37,18 +78,18 @@ export async function initializeVectorStore(): Promise<void> {
     console.log('🔄 Initializing vector store...');
     console.log(`📂 Loading documents from: ${VECTOR_CONFIG.docsPath}`);
 
-    // Load all markdown files from the docs directory
-    const loader = new DirectoryLoader(VECTOR_CONFIG.docsPath, {
-      '.md': (filePath: string) => new TextLoader(filePath),
-    });
+    // Find all markdown files
+    const markdownFiles = await findMarkdownFiles(VECTOR_CONFIG.docsPath);
+    console.log(`📄 Found ${markdownFiles.length} markdown files`);
 
-    const docs = await loader.load();
-    console.log(`📄 Loaded ${docs.length} documents`);
-
-    if (docs.length === 0) {
-      console.warn('⚠️  No documents found in docs directory');
+    if (markdownFiles.length === 0) {
+      console.warn('⚠️  No markdown files found in docs directory');
       return;
     }
+
+    // Load all markdown files
+    const docs = await Promise.all(markdownFiles.map(loadMarkdownFile));
+    console.log(`📚 Loaded ${docs.length} documents`);
 
     // Split documents into chunks for better retrieval
     const textSplitter = new RecursiveCharacterTextSplitter({
@@ -59,28 +100,13 @@ export async function initializeVectorStore(): Promise<void> {
     const splitDocs = await textSplitter.splitDocuments(docs);
     console.log(`✂️  Split into ${splitDocs.length} chunks`);
 
-    // Add metadata to chunks for better context
-    const enrichedDocs = splitDocs.map((doc) => {
-      const fileName = path.basename(doc.metadata.source, '.md');
-      const category = path.dirname(doc.metadata.source).split(path.sep).pop();
-
-      return new Document({
-        pageContent: doc.pageContent,
-        metadata: {
-          ...doc.metadata,
-          fileName,
-          category,
-        },
-      });
-    });
-
     // Create embeddings and store in memory vector store
     const embeddings = new OpenAIEmbeddings({
       openAIApiKey: process.env.OPENAI_API_KEY,
       modelName: 'text-embedding-3-small', // Cost-effective embedding model
     });
 
-    vectorStore = await MemoryVectorStore.fromDocuments(enrichedDocs, embeddings);
+    vectorStore = await MemoryVectorStore.fromDocuments(splitDocs, embeddings);
     console.log('✅ Vector store initialized successfully');
   } catch (error) {
     console.error('❌ Failed to initialize vector store:', error);
