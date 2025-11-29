@@ -174,3 +174,17 @@ export function getVectorStoreStats(): {
     documentCount: vectorStore ? (vectorStore as any).memoryVectors?.length : 0,
   };
 }
+
+/**
+ * Initialize vector store if not already initialized (for serverless environments)
+ * This function checks if the vector store exists and initializes it only if needed
+ */
+export async function initializeVectorStoreIfNeeded(): Promise<void> {
+  if (vectorStore !== null) {
+    console.log('✅ Vector store already initialized, reusing cached instance');
+    return;
+  }
+
+  console.log('🔄 Vector store not initialized, initializing now...');
+  await initializeVectorStore();
+}

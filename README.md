@@ -15,7 +15,23 @@ An AI-powered customer support chat application for financial products using Cla
 
 ## Quick Start
 
-### 🐳 Docker (Recommended)
+### ☁️ Deploy to Vercel (Recommended for Production)
+
+**One-click deployment:**
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yourusername/moneyhero-ai-support)
+
+Or deploy via CLI:
+
+```bash
+vercel
+```
+
+**Setup Guide:** See [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md)
+
+---
+
+### 🐳 Docker (Local Development)
 
 **One command to run everything:**
 
@@ -92,5 +108,42 @@ yarn test:coverage
 - React Testing Library for component tests
 - Jest for unit and integration tests
 - See [TESTING.md](TESTING.md) for complete testing guide
+
+## Deployment
+
+### Vercel (Recommended)
+
+Deploy to Vercel with one command:
+
+```bash
+vercel
+```
+
+**Features**:
+- ✅ Automatic HTTPS
+- ✅ Global CDN
+- ✅ Serverless Functions
+- ✅ Zero configuration
+- ✅ Preview deployments
+
+**Guide**: [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md)
+
+### Docker
+
+Deploy using Docker Compose:
+
+```bash
+docker-compose up -d
+```
+
+**Guide**: [DOCKER_README.md](DOCKER_README.md)
+
+### Environment Variables
+
+Required for deployment:
+- `ANTHROPIC_API_KEY` - Claude AI API key
+- `OPENAI_API_KEY` - OpenAI embeddings API key
+
+See `.env.vercel.example` for configuration.
 
 # smart-support-agent
