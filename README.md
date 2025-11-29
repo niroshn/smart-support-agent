@@ -70,4 +70,27 @@ yarn dev
 - Frontend runs on `http://localhost:5173`
 - Backend runs on `http://localhost:3001`
 - Both services support hot reload
+
+## Testing
+
+### Run Tests
+
+```bash
+# Run all tests
+yarn test
+
+# Run tests in watch mode
+yarn test:watch
+
+# Generate coverage report
+yarn test:coverage
+```
+
+### Test Coverage
+
+- **32 passing tests** covering components and services
+- React Testing Library for component tests
+- Jest for unit and integration tests
+- See [TESTING.md](TESTING.md) for complete testing guide
+
 # smart-support-agent
