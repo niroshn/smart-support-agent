@@ -3,7 +3,6 @@ import { ChatAnthropic } from '@langchain/anthropic';
 import { StringOutputParser } from '@langchain/core/output_parsers';
 import { ChatPromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts';
 import { HumanMessage, AIMessage, BaseMessage } from '@langchain/core/messages';
-import { getContextForQuery, initializeVectorStoreIfNeeded } from '../server/src/services/vectorService';
 
 interface Message {
   id: string;
@@ -12,6 +11,72 @@ interface Message {
   timestamp: Date;
   isEscalation?: boolean;
 }
+
+interface FinancialProduct {
+  id: string;
+  name: string;
+  type: 'Credit Card' | 'Personal Loan';
+  features: string[];
+  fees: {
+    annual?: string;
+    processing?: string;
+  };
+  interestRate: string;
+  eligibility: string;
+  description: string;
+}
+
+// Static knowledge base
+const KNOWLEDGE_BASE: FinancialProduct[] = [
+  {
+    id: 'cc-001',
+    name: 'MoneyHero CashBack Plus',
+    type: 'Credit Card',
+    features: ['5% cashback on groceries', '2% on dining', 'Unlimited 1% on everything else', 'Free travel insurance'],
+    fees: {
+      annual: 'No annual fee for the first year, then $150',
+    },
+    interestRate: '25.9% APR',
+    eligibility: 'Min. income $30,000/year, Age 21+',
+    description: 'The best everyday card for families looking to save on daily essentials.',
+  },
+  {
+    id: 'cc-002',
+    name: 'TravelElite Platinum',
+    type: 'Credit Card',
+    features: ['Unlimited lounge access', 'No foreign transaction fees', 'Earn 3 miles per $1 spent locally'],
+    fees: {
+      annual: '$550 (non-waivable)',
+    },
+    interestRate: '28.5% APR',
+    eligibility: 'Min. income $80,000/year, Age 21+',
+    description: 'Premium travel companion for frequent flyers seeking luxury perks.',
+  },
+  {
+    id: 'pl-001',
+    name: 'QuickCash Personal Loan',
+    type: 'Personal Loan',
+    features: ['Approval in 15 minutes', 'Flexible tenure 1-5 years', 'No early repayment penalty'],
+    fees: {
+      processing: '1% of loan amount',
+    },
+    interestRate: '3.88% p.a. (EIR 7.5% p.a.)',
+    eligibility: 'Citizens and PRs only, Age 21-65',
+    description: 'Fast liquidity for emergencies or big ticket purchases with competitive rates.',
+  },
+  {
+    id: 'pl-002',
+    name: 'DebtConsolidation Saver',
+    type: 'Personal Loan',
+    features: ['Direct payment to other banks', 'Lower specific interest rate', 'Single monthly payment'],
+    fees: {
+      processing: '$0',
+    },
+    interestRate: '2.5% p.a. (EIR 5.2% p.a.)',
+    eligibility: 'Existing debt > 12x monthly income',
+    description: 'Simplify your finances by combining multiple debts into one manageable repayment plan.',
+  }
+];
 
 // Convert app messages to LangChain message format
 function convertToLangChainMessages(messages: Message[]): BaseMessage[] {
@@ -34,6 +99,23 @@ async function* stringToStream(text: string): AsyncIterable<string> {
   }
 }
 
+// Format products for context
+function formatProductContext(): string {
+  return KNOWLEDGE_BASE.map((p) => {
+    const fees = Object.entries(p.fees)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join(', ');
+
+    return `Product: ${p.name}
+Type: ${p.type}
+Description: ${p.description}
+Features: ${p.features.join(', ')}
+Fees: ${fees}
+Interest Rate: ${p.interestRate}
+Eligibility: ${p.eligibility}`;
+  }).join('\n\n---\n\n');
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Only allow POST requests
   if (req.method !== 'POST') {
@@ -54,9 +136,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Initialize vector store if needed (cached in memory)
-    await initializeVectorStoreIfNeeded();
-
     // Set SSE headers
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -121,8 +200,8 @@ Output ONLY the category name (ESCALATE, OFF_TOPIC, or ANSWER).`,
       return res.end();
     }
 
-    // Step 2: Generate Answer with RAG
-    const productContext = await getContextForQuery(newMessage);
+    // Step 2: Generate Answer with static knowledge base
+    const productContext = formatProductContext();
 
     const systemMessage = `You are the MoneyHero AI Assistant, a helpful financial advisor specializing in credit cards and personal loans in Singapore.
 

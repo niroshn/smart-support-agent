@@ -5,7 +5,9 @@ interface StreamingResponse {
   isEscalation: boolean;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// In production (Vercel), use relative URLs. In development, use localhost
+const API_URL = import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? '' : 'http://localhost:3001');
 
 // --- Main Service Function ---
 export const sendMessageToAgent = async (
